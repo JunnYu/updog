@@ -29,9 +29,10 @@ def parse_arguments():
     parser.add_argument('-d', '--directory', metavar='DIRECTORY', type=read_write_directory, default=cwd,
                         help='Root directory\n'
                              '[Default=.]')
-    parser.add_argument('-p', '--port', type=int, default=9090,
-                        help='Port to serve [Default=9090]')
-    parser.add_argument('--password', type=str, default='', help='Use a password to access the page. (No username)')
+    parser.add_argument('-p', '--port', type=int, default=8100,
+                        help='Port to serve [Default=8100]')
+    parser.add_argument('--username', type=str, default='', help='Use a username to access the page.')
+    parser.add_argument('--password', type=str, default='', help='Use a password to access the page.')
     parser.add_argument('--ssl', action='store_true', help='Use an encrypted connection')
     parser.add_argument('--version', action='version', version='%(prog)s v'+VERSION)
 
@@ -58,6 +59,9 @@ def main():
         return send_from_directory(os.path.join(app.root_path, 'static'),
                                    'images/favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+    import socket  
+    hostname = socket.gethostname()  
+    ip_address = socket.gethostbyname(hostname)  
     ############################################
     # File Browsing and Download Functionality #
     ############################################
@@ -102,11 +106,14 @@ def main():
             is_subdirectory = False
             requested_path = base_directory
             back = ''
-
+        if args.username == "" or args.password == "":
+            prefix_url = None
+        else:
+            prefix_url = f"http://{args.username}:{args.password}@{ip_address}:{args.port}"
         if os.path.exists(requested_path):
             # Read the files
             try:
-                directory_files = process_files(os.scandir(requested_path), base_directory)
+                directory_files = process_files(os.scandir(requested_path), base_directory, prefix_url=prefix_url)
             except PermissionError:
                 abort(403, 'Read Permission Denied: ' + requested_path)
 
@@ -153,7 +160,7 @@ def main():
 
     # Password functionality is without username
     users = {
-        '': generate_password_hash(args.password)
+        args.username: generate_password_hash(args.password)
     }
 
     @auth.verify_password

@@ -28,7 +28,7 @@ def human_readable_file_size(size):
     return '{:.4g} {}'.format(size / (1 << (order * 10)), _suffixes[order])
 
 
-def process_files(directory_files, base_directory):
+def process_files(directory_files, base_directory, prefix_url=None):
     files = []
     for file in directory_files:
         if file.is_dir():
@@ -37,10 +37,16 @@ def process_files(directory_files, base_directory):
         else:
             size = human_readable_file_size(file.stat().st_size)
             size_sort = file.stat().st_size
+        rel_path = get_relative_path(file.path, base_directory)
+        if prefix_url is None:
+            download_url = "/" + rel_path
+        else:
+            download_url = prefix_url + "/" + rel_path
         files.append({
             'name': file.name,
             'is_dir': file.is_dir(),
-            'rel_path': get_relative_path(file.path, base_directory),
+            'rel_path': rel_path,
+            'download_url': download_url,
             'size': size,
             'size_sort': size_sort,
             'last_modified': ctime(file.stat().st_mtime),
